@@ -27,31 +27,16 @@ classdef Agent
             tf = any(vertcat(objs.x) ~= other.x,2);
         end
         function tf = eq(objs,other)
-            tf = any(vertcat(objs.x) == other.x,2);
+            tf = all(vertcat(objs.x) == other.x,2);
         end
         function obj = mutation(obj,population)
-            a = randsample(population,1);
-            while a == obj
-                a = randsample(population,1);
-            end
-            b = randsample(population,1);
-            while b == obj || b == a
-                b = randsample(population,1);
-            end
-            c = randsample(population,1);
-            while c == obj || c == a || c == b
-                c = randsample(population,1);
-            end
-            X = obj.x;
-            R = randsample(1:length(X),1);
-            for i =1:length(X)
-                if rand < obj.CR || i == R
-                    X(i)=a.x(i) + obj.F * (b.x(i)-c.x(i));
-                end
-            end
+            abc = randsample(population,3);
+            X_mutated = abc(1).x + obj.F * (abc(2).x-abc(3).x);
+            r = rand(1,length(obj.x));
+            X = obj.x .* (r>=obj.CR) + X_mutated .* (r<obj.CR);
             X = max(obj.l,min(X,obj.u));
             [Objective,Infeasibility] = obj.fcn(X);
-            if (Infeasibility <= obj.infeasibility) && (Objective < obj.objective)
+            if rand<0.5 || ((Infeasibility <= obj.infeasibility) && (Objective < obj.objective))
                 obj.x = X;
                 obj.infeasibility=Infeasibility;
                 obj.objective = Objective;
@@ -65,7 +50,7 @@ classdef Agent
             [~,I] = min(infeasibilities);
             M = objs(I);
             for i = find(infeasibilities==M.infeasibility)
-                if objs(i).dominates(M)
+                if objs(i).objective < M.objective
                     M = objs(i);
                     I = i;
                 end
